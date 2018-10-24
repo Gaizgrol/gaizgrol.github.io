@@ -1,0 +1,22 @@
+.button {
+    background-color: #E75F50; /* Green */
+    border: none;
+    color: white;
+    padding: 15px 32px;
+    text-align: center;
+    text-decoration: none;
+    display: inline-block;
+    font-size: 16px;
+    margin: 4px 2px;
+    cursor: pointer;
+    width: 64px;
+    height: 64px;
+}
+
+.centered {
+	text-align: center;
+}
+
+body {
+	background-color: #A3DBF7;
+}
