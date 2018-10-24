@@ -6,11 +6,11 @@
     text-align: center;
     text-decoration: none;
     display: inline-block;
-    font-size: 15vh;
+    font-size: 32px;
     margin: 4px 2px;
     cursor: pointer;
-    width: 20vw;
-    height: 20vh;
+    width: 128px;
+    height: 128px;
 }
 
 .centered {
