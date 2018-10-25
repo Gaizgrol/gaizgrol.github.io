@@ -11,12 +11,16 @@ const defaultColor = "#000000";
 const DEGTORAD = 0.0174532925;
 const RADTODEG = 57.2957795131;
 
+const EPSILON = 0;
+
 var fps = 20;
 
 var canvas = /**@type {HTMLCanvasElement} */ document.getElementById("gameScreen");
 var fake3dcanvas = /**@type {HTMLCanvasElement} */ document.getElementById("game3dScreen");
 var ctx = /**@type {CanvasRenderingContext2D} */ (canvas.getContext('2d')) ;
 var fake3dctx = /**@type {CanvasRenderingContext2D} */ (fake3dcanvas.getContext('2d')) ;
+
+var image = document.getElementById('textureWall');
 
 var window_width, window_height;
 
@@ -51,8 +55,8 @@ var key = {};
 
 var player;
 
-var resw = 90;
-var resh = 50;
+var resw = 900;
+var resh = 500;
 var ratio;
 
 var fov = 90;
@@ -320,12 +324,29 @@ function draw(){
 
 	}
 
-	drawSquare( player.x * cell_width, player.y * cell_height, cell_width, cell_height, player.color);
-
 	let ldir = new vec2( lengthdir_x( 1, player.direction ), lengthdir_y( 1, player.direction ) );
+
+	let lkx = lengthdir_x( min_canvas_side*1.5, player.direction + fov/2 );
+	let lky = lengthdir_y( min_canvas_side*1.5, player.direction + fov/2 );
 
 	//raytracing do caralho
 	//esse for aqui é pra iterar por cada pixel da 'câmera'
+	
+	ctx.strokeStyle = "#FFFFFF";
+	ctx.beginPath();
+	ctx.moveTo( player.worldPos.x, player.worldPos.y );
+	ctx.lineTo( player.worldPos.x+lkx, player.worldPos.y+lky);
+	ctx.stroke();
+
+	lkx = lengthdir_x( min_canvas_side*1.5, player.direction - fov/2 );
+	lky = lengthdir_y( min_canvas_side*1.5, player.direction - fov/2 );
+
+	ctx.strokeStyle = "#FFFFFF";
+	ctx.beginPath();
+	ctx.moveTo( player.worldPos.x, player.worldPos.y );
+	ctx.lineTo( player.worldPos.x+lkx, player.worldPos.y+lky);
+	ctx.stroke();
+
 	for (let i=0; i<resw; i++) {
 
 		let ldirx = lengthdir_x( min_canvas_side*1.5, player.direction + lerp( Math.floor(fov/2), Math.ceil(-fov/2), i/(resw-1) ) );
@@ -336,11 +357,11 @@ function draw(){
 			new vec2( player.worldPos.x + ldirx, player.worldPos.y + ldiry ),
 		]
 
-		ctx.strokeStyle = "#FFFFFF";
-		ctx.beginPath();
-		ctx.moveTo( ray[0].x, ray[0].y);
-		ctx.lineTo( ray[1].x, ray[1].y );
-		ctx.stroke();
+		//ctx.strokeStyle = "#FFFFFF";
+		//ctx.beginPath();
+		//ctx.moveTo( ray[0].x, ray[0].y);
+		//ctx.lineTo( ray[1].x, ray[1].y );
+		//ctx.stroke();
 
 		let intersections = [];
 
@@ -374,14 +395,24 @@ function draw(){
 
 				//se esta intersecção filha da puta está nas paredes
 				if ( intersection.x != Infinity && intersection.y != Infinity ) {
-					if (intersection.x >= wall.gridPos.x*cell_width && intersection.x <= (wall.gridPos.x+1)*cell_width) {
-						if (intersection.y >= wall.gridPos.y*cell_height && intersection.y <= (wall.gridPos.y+1)*cell_height) {
+					if (intersection.x >= wall.gridPos.x*cell_width - EPSILON && intersection.x <= (wall.gridPos.x+1)*cell_width + EPSILON) {
+						if (intersection.y >= wall.gridPos.y*cell_height - EPSILON && intersection.y <= (wall.gridPos.y+1)*cell_height + EPSILON) {
 
 							//se esta merda está no campo de visão
 							let intDir = intersection.sub(player.worldPos);
 							if ( intDir.dot(ldir) > 0 ) {
 
-								intersections.push(intersection);
+								let fullWall = edge[0].sub(edge[1]);
+								let pointInWall = edge[0].sub(intersection);
+
+								let textureCol = (pointInWall.norm())/(fullWall.norm())
+
+								intersections.push( [intersection,textureCol] );
+
+								//ctx.fillStyle = "#FFFF00";
+								//ctx.beginPath();
+								//ctx.arc( intersection.x, intersection.y, player.radius/2, 0, Math.PI*2, true );
+								//ctx.fill();
 
 							}
 
@@ -394,15 +425,17 @@ function draw(){
 		}
 
 		let closest = intersections;
+		let textureCol = 0;
 
 		let minDist = Infinity;
 
 		for ( let intersection of intersections ) {
 
-			let dist = player.worldPos.sub(intersection).sqrNorm();
+			let dist = player.worldPos.sub(intersection[0]).sqrNorm();
 			if ( dist < minDist ) {
 
-				closest = intersection;
+				closest = intersection[0];
+				textureCol = intersection[1];
 				minDist = dist;
 
 			}
@@ -414,7 +447,7 @@ function draw(){
 		ctx.arc( closest.x, closest.y, player.radius/2, 0, Math.PI*2, true );
 		ctx.fill();
 
-		hits[i] = Math.sqrt(minDist)/(min_canvas_side*2);
+		hits[i] = [ Math.sqrt(minDist)/(min_canvas_side*resh/30), textureCol ];
 
 	}
 
@@ -444,7 +477,7 @@ function drawFake3d(){
 	//raytrace
 	for (let i=0; i<resw; i++) {
 
-		drawColumn(i, 1/hits[i], wallColor);
+		drawColumn(i, 1/hits[i][0], hits[i][1]);
 
 	}
 
@@ -455,11 +488,18 @@ function drawFake3d(){
 
 }
 
-function drawColumn(x, size, color) {
-	fake3dctx.strokeStyle = color;
-	fake3dctx.beginPath();
-	fake3dctx.rect(x, resh/2-size/2, 1, size);
-	fake3dctx.stroke();
+function drawColumn(x, size, column) {
+	//fake3dctx.strokeStyle = color;
+	//fake3dctx.beginPath();
+	//fake3dctx.rect(x, resh/2-size/2, 2, size);
+	//fake3dctx.stroke();
+
+	let place = Math.round(image.width*column*10)/10;
+
+	fake3dctx.imageSmoothingEnabled = false;
+
+	//fake3dctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
+	fake3dctx.drawImage(image, place, 0, 1, image.height, x, resh/2-size/2, 2, size);
 }
 
 function loop() {
