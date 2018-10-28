@@ -2,10 +2,11 @@
 
 //=========================================================//
 
-const grassColor = "#5FDF5F";
+const grassColor = "#5FBF5F";
 const playerColor = "#22227F";
 const wallColor = "#7F7F7F";
 const wallDarkerColor = "#5F5F5F";
+const skyColor = "#7F7FFF";
 const defaultColor = "#000000";
 
 const DEGTORAD = 0.0174532925;
@@ -15,12 +16,16 @@ const EPSILON = 0;
 
 var fps = 20;
 
-var canvas = /**@type {HTMLCanvasElement} */ document.getElementById("gameScreen");
-var fake3dcanvas = /**@type {HTMLCanvasElement} */ document.getElementById("game3dScreen");
-var ctx = /**@type {CanvasRenderingContext2D} */ (canvas.getContext('2d')) ;
-var fake3dctx = /**@type {CanvasRenderingContext2D} */ (fake3dcanvas.getContext('2d')) ;
+/**@type {HTMLCanvasElement} */ var canvas = document.getElementById("minimap");
+/**@type {HTMLCanvasElement} */ var fake3dcanvas = document.getElementById("game3dScreen");
+/**@type {CanvasRenderingContext2D} */ var ctx = (canvas.getContext('2d')) ;
+/**@type {CanvasRenderingContext2D} */ var fake3dctx = (fake3dcanvas.getContext('2d')) ;
 
 var image = document.getElementById('textureWall');
+var leftHand = document.getElementById('textureLeft');
+var rightHand = document.getElementById('textureRight');
+
+var backSkyNight = document.getElementById('textureSkyNight');
 
 var window_width, window_height;
 
@@ -55,13 +60,15 @@ var key = {};
 
 var player;
 
-var resw = 900;
-var resh = 500;
+var resw = 96;
+var resh = 54;
 var ratio;
 
 var fov = 90;
 
 var hits = {};
+
+var showMinimap = false;
 
 class vec2 {
 	
@@ -125,13 +132,6 @@ class vec2 {
 
 }
 
-//=========================================================//
-
-
-// Init
-
-//=========================================================//
-
 document.addEventListener("keydown", handleKeyDown, false);
 document.addEventListener("keyup", handleKeyUp, false);
 
@@ -140,7 +140,7 @@ window_height = window.innerHeight;
 
 console.log(window_width, window_height);
 
-let min_canvas_side = Math.min(window_width*0.75, window_height*0.75);
+let min_canvas_side = Math.min(window_width*0.95, window_height*0.95);
 
 canvas.width = min_canvas_side;
 canvas.height = min_canvas_side;
@@ -192,8 +192,11 @@ for (let h=0; h<cell_vcount; h++) {
 				player = {
 					radius: r,
 					worldPos: new vec2( w*cell_width+cell_width/2, h*cell_height+cell_height/2),
+					z: 0,
 					direction: 90,
 					speed: min_canvas_side/100,
+					health: 100,
+					mana: 100,
 				}
 				break;
 			
@@ -218,7 +221,6 @@ for (let h=0; h<cell_vcount; h++) {
 }
 
 setInterval(loop, 1000/fps);
-//loop();
 
 //=========================================================//
 
@@ -234,6 +236,15 @@ function handleKeyDown(e){
         e.preventDefault();
     }
 
+    // tab
+	if (key[77]) {
+
+		showMinimap = !showMinimap;
+
+		canvas.style.display = (showMinimap)?"inline":"none";
+
+	}
+
 }
 
 function handleKeyUp(e){
@@ -244,20 +255,20 @@ function handleKeyUp(e){
 
 }
 
-function moveLeft() {
-	player.direction += 6;
+function moveLeft(n) {
+	player.direction += n;
 }
 
-function moveUp() {
-	move(1);
+function moveUp(n) {
+	move(1*n);
 }
 
-function moveRight() {
-	player.direction -= 6;
+function moveRight(n) {
+	player.direction -= n;
 }
 
-function moveDown() {
-	move(-1);
+function moveDown(n) {
+	move(-1*n);
 }
 
 function move( signal ) {
@@ -276,28 +287,41 @@ function move( signal ) {
 function update() {
 
 	// <
-	if (key[37]){
-		moveLeft();
+	if (key[37]) {
+		moveLeft(6);
 	}
 
 	// ^
-	if (key[38]){
-		moveUp();
+	if (key[38]) {
+		moveUp(1);
 	}
 
 	// >
-	if (key[39]){
-		moveRight();
+	if (key[39]) {
+		moveRight(6);
 	}
 
 	// v
-	if (key[40]){
-		moveDown();
+	if (key[40]) {
+		moveDown(1);
 	}
 
-//	if ( key[37] || key[38] || key[39] || key[40] ) {
-//		aiUpdate();
-//	}
+	// ctrl
+	if (key[16]) {
+		if ( Math.abs(player.z-1) < 16 )
+			player.z--;
+	}
+
+	// shift
+	if (key[17]) {
+		if ( Math.abs(player.z+1) < 16 )
+			player.z++;
+	}
+
+	if (player.direction>=360)
+		player.direction=player.direction%360;
+	while (player.direction<0)
+		player.direction+=360;
 
 }
 
@@ -310,27 +334,93 @@ function drawPlayer() {
 
 }
 
+function drawLeftHand() {
+
+	let mres = Math.min( resw, resh );
+
+	fake3dctx.imageSmoothingEnabled = false;
+	fake3dctx.drawImage( leftHand, 0, 0, leftHand.width, leftHand.height, resw/2-mres/2, resh-mres/2, mres/2, mres/2);
+
+}
+
+function drawRightHand() {
+
+	let mres = Math.min( resw, resh );
+
+	fake3dctx.imageSmoothingEnabled = false;
+	fake3dctx.drawImage( rightHand, 0, 0, rightHand.width, rightHand.height, resw/2, resh-mres/2, mres/2, mres/2);
+
+}
+
+function drawCrosshair() {
+
+	let mres = Math.min( resw, resh );
+
+	fake3dctx.strokeStyle = "#FFD000";
+	fake3dctx.beginPath();
+	fake3dctx.moveTo( resw/2 - mres/25, resh/2 );
+	fake3dctx.lineTo( resw/2 + mres/25, resh/2 );
+	fake3dctx.stroke();
+
+	fake3dctx.strokeStyle = "#FFD000";
+	fake3dctx.beginPath();
+	fake3dctx.moveTo( resw/2, resh/2 - mres/25 );
+	fake3dctx.lineTo( resw/2, resh/2 + mres/25 );
+	fake3dctx.stroke();
+
+}
+
+function drawHealth() {
+
+	let mres = Math.min( resw, resh );
+
+	fake3dctx.fillStyle = "#7F7F7F7F";
+	fake3dctx.rect(0, resh - 2 - 2*mres/25, 8*mres/25, 2*mres/25 + 2);
+	fake3dctx.fill();
+
+	fake3dctx.strokeStyle = "#FF0000";
+	fake3dctx.beginPath();
+	fake3dctx.moveTo( 1, resh - 1 - mres/25);
+	fake3dctx.lineTo( 1 + 2*mres/25, resh - 1 - mres/25 );
+	fake3dctx.stroke();
+
+	fake3dctx.strokeStyle = "#FF0000";
+	fake3dctx.beginPath();
+	fake3dctx.moveTo( 1 + mres/25, resh - 1 - 2*mres/25 );
+	fake3dctx.lineTo( 1 + mres/25, resh - 1 );
+	fake3dctx.stroke();
+
+	fake3dctx.fillStyle = "#FF0000";
+	fake3dctx.font = 2.5*mres/25+"px Arial";
+	fake3dctx.fillText(player.health, 1 + 2*mres/25, resh - 1 ); 
+
+}
+
+function drawMana() {
+
+}
+
+function drawHUD() {
+
+	drawLeftHand();
+	drawRightHand();
+	drawCrosshair();
+	drawHealth();
+	drawMana();
+
+}
+
 function draw(){
 
 	ctx.clearRect(0, 0, min_canvas_side, min_canvas_side);
 
-	for (let row of grid) {
-
-		for (let cell of row) {
-
+	for (let row of grid)
+		for (let cell of row)
 			drawSquare( cell.x * cell_width, cell.y * cell_height, cell_width+1, cell_height+1, cell.color);
 			
-		}
-
-	}
-
-	let ldir = new vec2( lengthdir_x( 1, player.direction ), lengthdir_y( 1, player.direction ) );
 
 	let lkx = lengthdir_x( min_canvas_side*1.5, player.direction + fov/2 );
 	let lky = lengthdir_y( min_canvas_side*1.5, player.direction + fov/2 );
-
-	//raytracing do caralho
-	//esse for aqui é pra iterar por cada pixel da 'câmera'
 	
 	ctx.strokeStyle = "#FFFFFF";
 	ctx.beginPath();
@@ -347,6 +437,19 @@ function draw(){
 	ctx.lineTo( player.worldPos.x+lkx, player.worldPos.y+lky);
 	ctx.stroke();
 
+	drawPlayer();
+
+	ctx.strokeStyle = defaultColor;
+	ctx.beginPath();
+	ctx.rect(0,0,grid_width-1,grid_height-1);
+	ctx.stroke();
+
+}
+
+function raytrace() {
+
+	let ldir = new vec2( lengthdir_x( 1, player.direction ), lengthdir_y( 1, player.direction ) );
+
 	for (let i=0; i<resw; i++) {
 
 		let ldirx = lengthdir_x( min_canvas_side*1.5, player.direction + lerp( Math.floor(fov/2), Math.ceil(-fov/2), i/(resw-1) ) );
@@ -356,12 +459,6 @@ function draw(){
 			new vec2( player.worldPos.x, player.worldPos.y ),
 			new vec2( player.worldPos.x + ldirx, player.worldPos.y + ldiry ),
 		]
-
-		//ctx.strokeStyle = "#FFFFFF";
-		//ctx.beginPath();
-		//ctx.moveTo( ray[0].x, ray[0].y);
-		//ctx.lineTo( ray[1].x, ray[1].y );
-		//ctx.stroke();
 
 		let intersections = [];
 
@@ -373,8 +470,8 @@ function draw(){
 			];
 
 			let top = [
-				new vec2( wall.gridPos.x*cell_width, wall.gridPos.y*cell_height ),
 				new vec2( (wall.gridPos.x+1)*cell_width, wall.gridPos.y*cell_height ),
+				new vec2( wall.gridPos.x*cell_width, wall.gridPos.y*cell_height ),
 			];
 
 			let right = [
@@ -383,41 +480,31 @@ function draw(){
 			];
 
 			let bottom = [
-				new vec2( ( wall.gridPos.x )*cell_width, (wall.gridPos.y+1)*cell_height ),
 				new vec2( (wall.gridPos.x+1)*cell_width, (wall.gridPos.y+1)*cell_height ),
+				new vec2( ( wall.gridPos.x )*cell_width, (wall.gridPos.y+1)*cell_height ),
 			];
 
 			let edges = [ left, top, right, bottom ];
 
 			for ( let edge of edges ) {
 
-				let intersection = whereTLI( ray[0], ray[1], edge[0], edge[1] );
+				if (TLSI(ray[0], ray[1], edge[0], edge[1])) {
 
-				//se esta intersecção filha da puta está nas paredes
-				if ( intersection.x != Infinity && intersection.y != Infinity ) {
-					if (intersection.x >= wall.gridPos.x*cell_width - EPSILON && intersection.x <= (wall.gridPos.x+1)*cell_width + EPSILON) {
-						if (intersection.y >= wall.gridPos.y*cell_height - EPSILON && intersection.y <= (wall.gridPos.y+1)*cell_height + EPSILON) {
+					let intersection = whereTLSI( ray[0], ray[1], edge[0], edge[1] );
 
-							//se esta merda está no campo de visão
-							let intDir = intersection.sub(player.worldPos);
-							if ( intDir.dot(ldir) > 0 ) {
+					//se esta merda está na frente do jogador
+					let intDir = intersection.sub(player.worldPos);
+					if ( intDir.dot(ldir) > 0 ) {
 
-								let fullWall = edge[0].sub(edge[1]);
-								let pointInWall = edge[0].sub(intersection);
+						let fullWall = edge[0].sub(edge[1]);
+						let pointInWall = edge[0].sub(intersection);
 
-								let textureCol = (pointInWall.norm())/(fullWall.norm())
+						let textureCol = (pointInWall.norm())/(fullWall.norm())
 
-								intersections.push( [intersection,textureCol] );
+						intersections.push( [intersection,textureCol] );
 
-								//ctx.fillStyle = "#FFFF00";
-								//ctx.beginPath();
-								//ctx.arc( intersection.x, intersection.y, player.radius/2, 0, Math.PI*2, true );
-								//ctx.fill();
-
-							}
-
-						}
 					}
+
 				}
 
 			}
@@ -442,21 +529,9 @@ function draw(){
 			
 		}
 
-		ctx.fillStyle = "#FF0000";
-		ctx.beginPath();
-		ctx.arc( closest.x, closest.y, player.radius/2, 0, Math.PI*2, true );
-		ctx.fill();
-
 		hits[i] = [ Math.sqrt(minDist)/(min_canvas_side*resh/30), textureCol ];
 
 	}
-
-	drawPlayer();
-
-	ctx.strokeStyle = defaultColor;
-	ctx.beginPath();
-	ctx.rect(0,0,grid_width-1,grid_height-1);
-	ctx.stroke();
 
 }
 
@@ -464,22 +539,26 @@ function drawFake3d(){
 
 	fake3dctx.clearRect(0, 0, resw, resh);
 
-	fake3dctx.fillStyle = "#A3DBF7";
-	fake3dctx.beginPath();
-	fake3dctx.rect(0, 0, resw, resh/2);
-	fake3dctx.fill();
+	let mres = Math.min(resw,resh);
+
+	fake3dctx.drawImage(backSkyNight, 0, 0, backSkyNight.width, backSkyNight.height, lerp( -mres*4, 0, player.direction/360), 0, mres*4 + 1, mres);
+	fake3dctx.drawImage(backSkyNight, 0, 0, backSkyNight.width, backSkyNight.height, lerp( 0, mres*4, player.direction/360), 0, mres*4 + 1, mres);
 
 	fake3dctx.fillStyle = grassColor;
 	fake3dctx.beginPath();
-	fake3dctx.rect(0, resh/2, resw, resh/2);
+	fake3dctx.rect(0, resh/2-player.z, resw, resh/2+player.z);
 	fake3dctx.fill();
 
-	//raytrace
+	raytrace();
+
+	//ray draw
 	for (let i=0; i<resw; i++) {
 
 		drawColumn(i, 1/hits[i][0], hits[i][1]);
 
 	}
+
+	drawHUD();
 
 	fake3dctx.strokeStyle = defaultColor;
 	fake3dctx.beginPath();
@@ -489,23 +568,20 @@ function drawFake3d(){
 }
 
 function drawColumn(x, size, column) {
-	//fake3dctx.strokeStyle = color;
-	//fake3dctx.beginPath();
-	//fake3dctx.rect(x, resh/2-size/2, 2, size);
-	//fake3dctx.stroke();
 
-	let place = Math.round(image.width*column*10)/10;
+	let place = lerp(0,0.9,Math.round(image.width*column*10)/10);
 
 	fake3dctx.imageSmoothingEnabled = false;
 
 	//fake3dctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
-	fake3dctx.drawImage(image, place, 0, 1, image.height, x, resh/2-size/2, 2, size);
+	fake3dctx.drawImage(image, place, 0, 1, image.height, x, resh/2-size/2-player.z, 1.75, size);
 }
 
 function loop() {
 
 	update();
-	draw();
+	if (showMinimap)
+		draw();
 	drawFake3d();
 
 }
@@ -549,113 +625,66 @@ function isInsideWall( point ) {
 
 }
 
-function TLI ( vecA, vecB, vecC, vecD ) {
-
-	// Express the straight lines in the form of y = ax + b (line passing A,B) and y = cx + d (line passing C,D);
-	// See if C and D are on the same side of y = ax+b;
-	// See if A and B are on the same side of y = cx+d;
-	// If the answer to the above are both no, then there is an intersection. Otherwise there is no intersection;
+function TLSI ( vecA, vecB, vecC, vecD ) {
 
 	return ( !sameSideOfLine( vecA, vecB, vecC, vecD ) && !sameSideOfLine( vecC, vecD, vecA, vecB ) );
-	
-	// TODO:
-	// Find the intersection if there is one.
 
 }
 
-function whereTLI ( vecA, vecB, vecC, vecD ) {
+function whereTLSI ( rayA, rayB, edgeA, edgeB ) {
 
-	if ( vecA.x > vecB.x )
+	if ( rayA.x > rayB.x )
 	{
 
-		let temp = vecA.x;
-		vecA.x = vecB.x;
-		vecB.x = temp;
+		let temp = rayA.x;
+		rayA.x = rayB.x;
+		rayB.x = temp;
 
-		temp = vecA.y;
-		vecA.y = vecB.y;
-		vecB.y = temp;
+		temp = rayA.y;
+		rayA.y = rayB.y;
+		rayB.y = temp;
 
 	}
 
-	if ( vecC.x > vecD.x )
-	{
+	let y, a, x, b;
 
-		let temp = vecC.x;
-		vecC.x = vecD.x;
-		vecD.x = temp;
+	//se o raio é uma assíntota vertical
+	if ( rayA.x == rayB.x ) {
 
-		temp = vecC.y;
-		vecC.y = vecD.y;
-		vecD.y = temp;
+		//lado vertical
+		if ( edgeA.x == edgeB.x ) {
 
-	}
+			return new vec2( Infinity, Infinity );
 
-	let a1, b1, a2, b2;
-
-	let abIsVertical = false;
-	let cdIsVertical = false;
-
-	if ( vecA.x != vecB.x )
-	{
-
-		// primeira função y1 = a1*x + b1
-		a1 = (vecB.y - vecA.y) / ( vecB.x - vecA.x );
-		b1 = vecB.y - a1 * vecB.x;
-
-	} else {
-
-		abIsVertical = true;
-
-	}
-
-	if ( vecC.x != vecD.x )
-	{
-		// segunda função y2 = a2*x + b2
-		a2 = (vecD.y - vecC.y) / ( vecD.x - vecC.x );
-		b2 = vecD.y - a2 * vecD.x;
-
-	} else {
-
-		cdIsVertical = true;
-
-	}
-
-	if (abIsVertical) {
-
-		if (cdIsVertical) {
-
-			return new vec2(Infinity, Infinity);
-
+		//lado horizontal
 		} else {
-
-			return new vec2( vecA.x, a2*vecA.x + b2 );
+			
+			return new vec2( rayA.x, edgeA.y );
 
 		}
 
 	} else {
 
-		if (cdIsVertical) {
+		// primeira função y1 = a1*x + b1
+		a = (rayB.y - rayA.y) / ( rayB.x - rayA.x );
+		b = rayB.y - a * rayB.x;
 
-			return new vec2( vecC.x, a1*vecC.x + b1 );
-			
+		//lado vertical
+		if ( edgeA.x == edgeB.x ) {
+
+			x = edgeA.x;
+			y = a*x + b;
+
+			return new vec2( x, y );
+
+		//lado horizontal
 		} else {
 
-			let x = (b2 - b1)/(a1 - a2);
+			y = edgeA.y;
 
-			let y1 = a1*x + b1;
-			let y2 = a2*x + b2;
-
-			if ( y1 == y2 ) {
-
-				return new vec2( x, y1 );
-
-			} else {
-
-				return new vec2( Infinity, Infinity );
-
-			}
+			x = (y - b) / a;
 			
+			return new vec2( x, y );
 
 		}
 

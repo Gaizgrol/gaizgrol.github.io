@@ -15,20 +15,24 @@
 	<body class="centered">
 
 		<div style="display:none;">
+			<img id="textureSkyNight" src="textures/skyNight.png" width="512" height="128">
 			<img id="textureWall" src="textures/wall.png" width="16" height="16">
+			<img id="textureLeft" src="textures/handLeft.png" width="32" height="32">
+			<img id="textureRight" src="textures/handRight.png" width="32" height="32">
+			<img id="textureGunFire" src="textures/gunFire.png" width="32" height="32">
 		</div>
 
-		<canvas id="gameScreen"></canvas>
 		<canvas id="game3dScreen"></canvas>
+		<canvas id="minimap" style="display:none;"></canvas>
 		<script type="text/javascript" src="gameLogic.js"></script>
 
 		<br>
 
-		<button class="button button2" onclick="moveUp();"> ↑ </button>
+		<button class="button button2" onclick="moveUp(5);"> ↑ </button>
 		<div>
-			<button class="button button1" onclick="moveLeft();"> ← </button>
-			<button class="button button4" onclick="moveDown();"> ↓ </button>
-			<button class="button button3" onclick="moveRight();"> → </button>
+			<button class="button button1" onclick="moveLeft(22.5);"> ← </button>
+			<button class="button button4" onclick="moveDown(5);"> ↓ </button>
+			<button class="button button3" onclick="moveRight(22.5);"> → </button>
 		</div>
 		
 	</body>
