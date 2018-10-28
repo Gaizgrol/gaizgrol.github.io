@@ -24,6 +24,7 @@ var fps = 20;
 var image = document.getElementById('textureWall');
 var leftHand = document.getElementById('textureLeft');
 var rightHand = document.getElementById('textureRight');
+var staff = document.getElementById('textureStaff');
 
 var backSkyNight = document.getElementById('textureSkyNight');
 
@@ -35,22 +36,30 @@ var cell_width, cell_height;
 
 var level = [];
 
-level.push("................");
-level.push(".gggggggggggggg.");
-level.push(".g.gggggggg...g.");
-level.push(".g...gggggggg.g.");
-level.push(".g.ggg....ggg.g.");
-level.push(".ggggg.gg.ggggg.");
-level.push(".ggggg.gggggggg.");
-level.push(".ggg...gg.ggggg.");
-level.push(".gggggggg.ggggg.");
-level.push(".ggg........ggg.");
-level.push(".ggg.gggggg.ggg.");
-level.push(".ggggggg-gggggg.");
-level.push(".ggg.gggggg.ggg.");
-level.push(".ggg........ggg.");
-level.push(".gggggggggggggg.");
-level.push("................");
+level.push("........................");
+level.push(".gggggggggggggggggggggg.");
+level.push(".gggggggggggggggggggggg.");
+level.push(".gggggggggggggggggggggg.");
+level.push(".ggg.....gggggg.....ggg.");
+level.push(".ggg.gggggggggggggg.ggg.");
+level.push(".ggg.gggggggggggggg.ggg.");
+level.push(".ggg.gggggggggggggg.ggg.");
+level.push(".ggg.gggggggggggggg.ggg.");
+level.push(".gggggggggggggggggggggg.");
+level.push(".gggggggggggggggggggggg.");
+level.push(".gggggggggggggggggggggg.");
+level.push(".gggggggggggggggggggggg.");
+level.push(".gggggggggggggggggggggg.");
+level.push(".gggggggggggggggggggggg.");
+level.push(".ggg.gggggggggggggg.ggg.");
+level.push(".ggg.gggggggggggggg.ggg.");
+level.push(".ggg.gggggggggggggg.ggg.");
+level.push(".ggg.gggggggggggggg.ggg.");
+level.push(".ggg.....gggggg.....ggg.");
+level.push(".gggggggggggggggggggggg.");
+level.push(".gggggggggggggggggggggg.");
+level.push(".ggggggggggg-gggggggggg.");
+level.push("........................");
 
 var grid;
 
@@ -374,29 +383,19 @@ function drawHealth() {
 
 	let mres = Math.min( resw, resh );
 
-	fake3dctx.fillStyle = "#7F7F7F7F";
-	fake3dctx.rect(0, resh - 2 - 2*mres/25, 8*mres/25, 2*mres/25 + 2);
-	fake3dctx.fill();
-
-	fake3dctx.strokeStyle = "#FF0000";
-	fake3dctx.beginPath();
-	fake3dctx.moveTo( 1, resh - 1 - mres/25);
-	fake3dctx.lineTo( 1 + 2*mres/25, resh - 1 - mres/25 );
-	fake3dctx.stroke();
-
-	fake3dctx.strokeStyle = "#FF0000";
-	fake3dctx.beginPath();
-	fake3dctx.moveTo( 1 + mres/25, resh - 1 - 2*mres/25 );
-	fake3dctx.lineTo( 1 + mres/25, resh - 1 );
-	fake3dctx.stroke();
-
 	fake3dctx.fillStyle = "#FF0000";
 	fake3dctx.font = 2.5*mres/25+"px Arial";
-	fake3dctx.fillText(player.health, 1 + 2*mres/25, resh - 1 ); 
+	fake3dctx.fillText(player.health, 1, resh - 1 ); 
 
 }
 
 function drawMana() {
+
+	let mres = Math.min( resw, resh );
+
+	fake3dctx.fillStyle = "#3333FF";
+	fake3dctx.font = 2.5*mres/25+"px Arial";
+	fake3dctx.fillText(player.mana, resw - (6*mres/25), resh - 1 ); 
 
 }
 
@@ -544,7 +543,11 @@ function drawFake3d(){
 	fake3dctx.drawImage(backSkyNight, 0, 0, backSkyNight.width, backSkyNight.height, lerp( -mres*4, 0, player.direction/360), 0, mres*4 + 1, mres);
 	fake3dctx.drawImage(backSkyNight, 0, 0, backSkyNight.width, backSkyNight.height, lerp( 0, mres*4, player.direction/360), 0, mres*4 + 1, mres);
 
-	fake3dctx.fillStyle = grassColor;
+	let grd= fake3dctx.createLinearGradient(resw/2,resh-player.z,resw/2,-player.z);
+	grd.addColorStop(0, grassColor);
+	grd.addColorStop(.6,"black");
+
+	fake3dctx.fillStyle = grd;
 	fake3dctx.beginPath();
 	fake3dctx.rect(0, resh/2-player.z, resw, resh/2+player.z);
 	fake3dctx.fill();
@@ -575,6 +578,14 @@ function drawColumn(x, size, column) {
 
 	//fake3dctx.drawImage(image, sx, sy, sWidth, sHeight, dx, dy, dWidth, dHeight);
 	fake3dctx.drawImage(image, place, 0, 1, image.height, x, resh/2-size/2-player.z, 1.75, size);
+
+	let alpha = lerp( 0, 1, (1 - (size/resh)*3.5 ) );
+
+	fake3dctx.fillStyle = "rgba(0, 0, 0, " + alpha + ")"; ;
+	fake3dctx.beginPath();
+	fake3dctx.rect( x-0.02, resh/2-size/2-player.z-0.02, 1.78, size+0.04 );
+	fake3dctx.fill();
+
 }
 
 function loop() {
