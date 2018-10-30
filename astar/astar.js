@@ -40,6 +40,7 @@ document.addEventListener("keydown", handleKeyDown, false);
 document.addEventListener("keyup", handleKeyUp, false);
 canvas.addEventListener("mousemove", mouseMove, false);
 canvas.addEventListener("click", mouseClick, false);
+canvas.addEventListener("touchstart", touchClick, false);
 
 //=========================================================//
 
@@ -168,6 +169,25 @@ function mouseClick(event) {
 	mouseH = (mouseY/cell_size) - (mouseY/cell_size)%1
 
     grid[mouseH][mouseW].ID = menu.selectedIndex;
+
+}
+
+function touchClick(event) {
+
+	event.preventDefault();
+	var touches = event.changedTouches;
+
+	for (var i=0; i < touches.length; i++) {
+
+		mouseX = touches[i].pageX;
+		mouseY = touches[i].pageY;
+
+		mouseW = (mouseX/cell_size) - (mouseX/cell_size)%1
+		mouseH = (mouseY/cell_size) - (mouseY/cell_size)%1
+
+	    grid[mouseH][mouseW].ID = menu.selectedIndex;
+
+	}
 
 }
 
