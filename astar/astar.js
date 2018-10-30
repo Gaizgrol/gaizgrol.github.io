@@ -10,23 +10,40 @@ const COLOR_BLOCK = "#6F3F12";
 //2
 const COLOR_START = "#0000FF";
 
-const COLOR_OPEN = "#008800";
-const COLOR_CLOSED = "#880000"
-
 //3
 const COLOR_GOAL = "#FFFF00";
 
+//4
+const COLOR_OPEN = "#008800";
+
+//5
+const COLOR_CLOSED = "#880000"
+
+const ITEM_COLOR = [COLOR_EMPTY, COLOR_GRID, COLOR_START, COLOR_GOAL];
+
 const FPS = 25;
+
+var mouseX = -1;
+var mouseY = -1;
+var mouseW = -1;
+var mouseH = -1;
 
 //=========================================================//
 
 /**@type {HTMLCanvasElement} */ var canvas = document.getElementById("grid");
 /**@type {CanvasRenderingContext2D} */ var ctx = (canvas.getContext('2d')) ;
+var rect = canvas.getBoundingClientRect();
+var menu = document.getElementById("menu");
+var menuItem = menu.options[menu.selectedIndex].text;
 
 document.addEventListener("keydown", handleKeyDown, false);
 document.addEventListener("keyup", handleKeyUp, false);
+canvas.addEventListener("mousemove", mouseMove, false);
+canvas.addEventListener("click", mouseClick, false);
 
 //=========================================================//
+
+var key = {};
 
 //=========================================================//
 
@@ -64,7 +81,7 @@ for (let h=0; h<grid_height; h++) {
 			f: 0,
 			g: 0,
 			h: 0,
-			color: COLOR_EMPTY,
+			ID: 0,
 		}
 
 		row.push(cell);
@@ -83,9 +100,25 @@ function update() {
 
 function draw(){
 
-	for (let row of grid)
-		for (let cell of row)
-			drawSquare( cell.x * cell_size, cell.y * cell_size, cell_size-1, cell_size-1, cell.color);
+	for (let row of grid) {
+		for (let cell of row) {
+
+			mouseW = (mouseX/cell_size) - (mouseX/cell_size)%1
+			mouseH = (mouseY/cell_size) - (mouseY/cell_size)%1
+
+			drawSquare( cell.x * cell_size, cell.y * cell_size, cell_size-1, cell_size-1, ITEM_COLOR[cell.ID]);
+
+			if ( mouseW == cell.x && mouseH == cell.y ) {
+				let rgb = (ITEM_COLOR[menu.selectedIndex]).slice(1, 7);
+				let r = parseInt(rgb.slice(0,2), 16);
+				let g = parseInt(rgb.slice(2,4), 16);
+				let b = parseInt(rgb.slice(4,6), 16);
+				drawSquare( cell.x * cell_size, cell.y * cell_size, cell_size-1, cell_size-1, "rgba("+r+","+g+","+b+", .5)");
+			}
+
+
+		}
+	}
 
 }
 
@@ -117,6 +150,24 @@ function handleKeyUp(e){
 	if (key[e.keyCode]) {
 		key[e.keyCode] = false;
 	}
+
+}
+
+function mouseMove(event) {
+
+    mouseX = event.clientX - rect.x;
+    mouseY = event.clientY - rect.y;
+
+}
+
+function mouseClick(event) {
+
+	mouseMove(event);
+	
+	mouseW = (mouseX/cell_size) - (mouseX/cell_size)%1
+	mouseH = (mouseY/cell_size) - (mouseY/cell_size)%1
+
+    grid[mouseH][mouseW].ID = menu.selectedIndex;
 
 }
 
