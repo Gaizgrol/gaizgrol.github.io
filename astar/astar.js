@@ -1,11 +1,20 @@
 //=========================================================//
 
+const EMPTY = 0;
+const BLOCK = 1;
+const START = 2;
+const GOAL = 3;
+
+const OPEN = 4;
+const CLOSED = 5;
+
+const PATH = 6;
+
 //0
 const COLOR_EMPTY = "#DFDFDF";
-const COLOR_GRID = "#000000";
 
 //1
-const COLOR_BLOCK = "#6F3F12";
+const COLOR_BLOCK = "#000000";
 
 //2
 const COLOR_START = "#0000FF";
@@ -17,11 +26,16 @@ const COLOR_GOAL = "#FFFF00";
 const COLOR_OPEN = "#008800";
 
 //5
-const COLOR_CLOSED = "#880000"
+const COLOR_CLOSED = "#880000";
 
-const ITEM_COLOR = [COLOR_EMPTY, COLOR_GRID, COLOR_START, COLOR_GOAL];
+//6
+const COLOR_PATH = "#00FFFF";
+
+const ITEM_COLOR = [COLOR_EMPTY, COLOR_BLOCK, COLOR_START, COLOR_GOAL, COLOR_OPEN, COLOR_CLOSED, COLOR_PATH];
 
 const FPS = 25;
+
+const FRAMESKIP = 5;
 
 var mouseX = -1;
 var mouseY = -1;
@@ -35,18 +49,22 @@ var mouseH = -1;
 var rect = canvas.getBoundingClientRect();
 var menu = document.getElementById("menu");
 var menuItem = menu.options[menu.selectedIndex].text;
+var button = document.getElementById("update");
 
 document.addEventListener("keydown", handleKeyDown, false);
 document.addEventListener("keyup", handleKeyUp, false);
 canvas.addEventListener("mousemove", mouseMove, false);
 canvas.addEventListener("click", mouseClick, false);
 canvas.addEventListener("touchstart", touchClick, false);
+button.addEventListener("click", update, false);
 
 //=========================================================//
 
 var key = {};
 
 //=========================================================//
+
+// CONFIGURAÇÃO DO GRID
 
 var grid_width = 40;
 var grid_height = 40;
@@ -58,46 +76,81 @@ canvas.height = grid_width * cell_size;
 
 var grid = [];
 
-class Cell {
-	
-	constructor(x, y){
+gridReset();
 
-		this.x = x;
-		this.y = y;
+//=========================================================//
 
-	}
+// INICIANDO O GRID
 
-}
+function gridReset() {
 
+	grid = [];
 
-for (let h=0; h<grid_height; h++) {
+	for (let h=0; h<grid_height; h++) {
 
-	let row = [];
+		let row = [];
 
-	for (let w=0; w<grid_width; w++) {
+		for (let w=0; w<grid_width; w++) {
 
-		let cell = {
-			x: w,
-			y: h,
-			f: 0,
-			g: 0,
-			h: 0,
-			ID: 0,
+			let cell = {
+				ID: 0,
+				parentCell: null,
+				x: w,
+				y: h,
+				h: 0,
+				g: 0,
+				f: 0,
+			}
+
+			row.push(cell);
+			
 		}
 
-		row.push(cell);
-		
+		grid.push(row);
+
 	}
 
-	grid.push(row);
+	started = false;
 
 }
+
+//=========================================================//
+
+// LISTA DE CÉLULAS ABERTAS PARA ANÁLISE
+
+var start = null;
+var end = null;
+
+var openList = [];
+var closedList = [];
+
+var started = false;
+var found = false;
+
+//=========================================================//
+
+// LOOP DO PROGRAMA
 
 setInterval(loop, 1000/FPS);
 
+//=========================================================//
+
+
+// ATUALIZAÇÃO DAS CÉLULAS
+
 function update() {
 
+	let skip = FRAMESKIP;
+
+	while (skip) {
+		updateAStar();
+		skip--;
+	}
+
 }
+
+
+// DESENHO
 
 function draw(){
 
@@ -123,15 +176,161 @@ function draw(){
 
 }
 
+
+// LOOP PRINCIPAL
+
 function loop() {
 
-	update();
+
 	draw();
 
 }
 
 //=========================================================//
 
+// FUNÇÕES DO A*
+
+function updateAStar() {
+
+	if (!found)	{
+
+		if (!started) {
+			
+			if (start) {
+				openList.push(start);
+				started = true;
+			}
+
+		} else {
+
+			current = getLowestFCostCell();
+
+			for ( let neighbour of getNeighbourCells(current) )
+			    updateCell(neighbour, current);
+
+			current.ID = CLOSED;
+
+			var index = openList.indexOf(current);
+			if (index > -1)
+			  openList.splice(index, 1);
+
+		}
+
+	}
+
+}
+
+
+function updateCell( cell, parent ) {
+
+	if (cell.ID == GOAL) {
+        cell.parentCell = parent;
+        found = true;
+        traceback(cell);
+    }
+        
+    if (cell.ID == EMPTY){
+        cell.ID = OPEN;
+        cell.parentCell = parent;
+        cell.g = calculateG(parent, cell);
+        cell.h = calculateH(cell, end);
+        cell.f = cell.g + cell.h;
+        openList.push(cell);
+    }
+
+}
+
+function calculateH(from, to) {
+    
+    let x = from.x - to.x;
+    let y = from.y - to.y;
+    
+    return Math.floor(10 * Math.sqrt( x*x + y*y ));
+    
+}
+
+
+function calculateG(from, to) {
+    
+    let x = from.x - to.x;
+    let y = from.y - to.y;
+    
+    return Math.floor(10 * Math.sqrt( x*x + y*y )) + from.g;
+    
+}
+
+
+function getLowestFCostCell() {
+
+	let lowestFCostCell = null;
+	let lowestFCost = Infinity;
+
+	for (let cell of openList) {
+		if (cell.f < lowestFCost) {
+			lowestFCost = cell.f;
+			lowestFCostCell = cell;
+		}
+	}
+
+	return lowestFCostCell;
+
+}
+
+
+function getNeighbourCells( cell ) {
+
+	let neighbours = [];
+
+	for (let i=cell.y-1; i<=cell.y+1; i++)
+		for ( let j=cell.x-1; j<=cell.x+1; j++ )
+			if ( (i>=0 && i<=grid.length-1) && (j>=0 && j<=grid[i].length-1) && cell!=grid[i][j] )
+				neighbours.push(grid[i][j]);
+
+	return neighbours;
+
+}
+
+function traceback(cell) {
+
+	if (cell.parentCell) {
+		cell.ID = PATH;
+		traceback(cell.parentCell);
+	}
+
+}
+
+
+function updateCellOnClick( mW, mH ) {
+
+	if ( grid[mouseH][mouseW] == start )
+		start = null;
+
+	if ( grid[mouseH][mouseW] == end )
+		end = null;
+
+	grid[mouseH][mouseW].ID = menu.selectedIndex;
+
+	if (menu.selectedIndex == START) {
+
+		if (start)
+			start.ID = EMPTY;
+		start = grid[mouseH][mouseW];
+
+	} else if (menu.selectedIndex == GOAL) {
+
+		if (end)
+			end.ID = EMPTY;
+		end = grid[mouseH][mouseW];
+
+	}
+
+}
+
+//=========================================================//
+
+// FUNÇÕES DE INPUT
+
+// TECLA APERTADA
 
 function handleKeyDown(e){
 
@@ -146,6 +345,9 @@ function handleKeyDown(e){
 
 }
 
+
+// TECLA LIBERADA
+
 function handleKeyUp(e){
 
 	if (key[e.keyCode]) {
@@ -154,10 +356,13 @@ function handleKeyUp(e){
 
 }
 
+
+// MOVIMENTO DO MOUSE
+
 function mouseMove(event) {
 
-    mouseX = event.clientX - rect.x;
-    mouseY = event.clientY - rect.y;
+    mouseX = event.pageX - rect.x;
+    mouseY = event.pageY - rect.y;
 
 }
 
@@ -168,7 +373,7 @@ function mouseClick(event) {
 	mouseW = (mouseX/cell_size) - (mouseX/cell_size)%1
 	mouseH = (mouseY/cell_size) - (mouseY/cell_size)%1
 
-    grid[mouseH][mouseW].ID = menu.selectedIndex;
+   updateCellOnClick( mouseW, mouseH );
 
 }
 
@@ -185,7 +390,7 @@ function touchClick(event) {
 		mouseW = (mouseX/cell_size) - (mouseX/cell_size)%1
 		mouseH = (mouseY/cell_size) - (mouseY/cell_size)%1
 
-	    grid[mouseH][mouseW].ID = menu.selectedIndex;
+	    updateCellOnClick( mouseW, mouseH );
 
 	}
 
@@ -199,3 +404,5 @@ function drawSquare(x1, y1, w, h, color) {
 	ctx.fill();
 
 }
+
+//=========================================================//
