@@ -35,7 +35,7 @@ const ITEM_COLOR = [COLOR_EMPTY, COLOR_BLOCK, COLOR_START, COLOR_GOAL, COLOR_OPE
 
 const FPS = 25;
 
-const FRAMESKIP = 5;
+const FRAMESKIP = 20;
 
 var mouseX = -1;
 var mouseY = -1;
@@ -208,7 +208,8 @@ function updateAStar() {
 			for ( let neighbour of getNeighbourCells(current) )
 			    updateCell(neighbour, current);
 
-			current.ID = CLOSED;
+			if (current.ID != START)
+				current.ID = CLOSED;
 
 			var index = openList.indexOf(current);
 			if (index > -1)
@@ -293,8 +294,10 @@ function getNeighbourCells( cell ) {
 function traceback(cell) {
 
 	if (cell.parentCell) {
-		cell.ID = PATH;
-		traceback(cell.parentCell);
+		if (cell.ID != GOAL)
+			cell.ID = PATH;
+		if (cell.parentCell.parentCell)
+			traceback(cell.parentCell);
 	}
 
 }
