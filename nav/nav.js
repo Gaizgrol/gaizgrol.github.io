@@ -1,41 +1,53 @@
+import { vec2 } from './vec2.js';
+
 //=========================================================//
 
 const EMPTY = 0;
-const BLOCK = 1;
-const START = 2;
-const GOAL = 3;
-
-const OPEN = 4;
-const CLOSED = 5;
-
-const PATH = 6;
+const START = 1;
+const GOAL = 2;
+const OPEN = 3;
+const CLOSED = 4;
+const PATH = 5;
 
 //0
 const COLOR_EMPTY = "#DFDFDF";
 
 //1
-const COLOR_BLOCK = "#000000";
-
-//2
 const COLOR_START = "#0000FF";
 
-//3
+//2
 const COLOR_GOAL = "#FFFF00";
 
-//4
+//3
 const COLOR_OPEN = "#008800";
 
-//5
+//4
 const COLOR_CLOSED = "#880000";
 
-//6
+//5
 const COLOR_PATH = "#00FFFF";
 
-const ITEM_COLOR = [COLOR_EMPTY, COLOR_BLOCK, COLOR_START, COLOR_GOAL, COLOR_OPEN, COLOR_CLOSED, COLOR_PATH];
+const NODE_COLOR = [COLOR_EMPTY, COLOR_START, COLOR_GOAL, COLOR_OPEN, COLOR_CLOSED, COLOR_PATH];
 
 const FPS = 25;
 
-const FRAMESKIP = 20;
+
+//=========================================================//
+
+/**@type {HTMLCanvasElement} */ var canvas = document.getElementById("view");
+/**@type {CanvasRenderingContext2D} */ var ctx = (canvas.getContext('2d')) ;
+var rect = canvas.getBoundingClientRect();
+var button = document.getElementById("update");
+
+document.addEventListener("keydown", handleKeyDown, false);
+document.addEventListener("keyup", handleKeyUp, false);
+canvas.addEventListener("mousemove", mouseMove, false);
+canvas.addEventListener("click", mouseClick, false);
+canvas.addEventListener("touchstart", touchClick, false);
+
+//=========================================================//
+
+var key = {};
 
 var mouseX = -1;
 var mouseY = -1;
@@ -44,37 +56,49 @@ var mouseH = -1;
 
 //=========================================================//
 
-/**@type {HTMLCanvasElement} */ var canvas = document.getElementById("grid");
-/**@type {CanvasRenderingContext2D} */ var ctx = (canvas.getContext('2d')) ;
-var rect = canvas.getBoundingClientRect();
-var menu = document.getElementById("menu");
-var menuItem = menu.options[menu.selectedIndex].text;
-var button = document.getElementById("update");
 
-document.addEventListener("keydown", handleKeyDown, false);
-document.addEventListener("keyup", handleKeyUp, false);
-canvas.addEventListener("mousemove", mouseMove, false);
-canvas.addEventListener("click", mouseClick, false);
-canvas.addEventListener("touchstart", touchClick, false);
-button.addEventListener("click", update, false);
+export class Node {
+
+	constructor( x, y ) {
+
+		this.x = x;
+		this.y = y;
+
+		this.neighbours = [];
+
+	}
+
+
+	addNeighbourNode( node ) {
+
+		this.neighbours.push( node );
+
+	}
+
+
+	getNeighbourNodes() {
+
+		return this.neighbours;
+
+	}
+
+
+}
+
 
 //=========================================================//
 
-var key = {};
+// CONFIGURAÇÃO DO CANVAS
 
-//=========================================================//
+var view_width = 640;
+var view_height = 480;
 
-// CONFIGURAÇÃO DO GRID
+canvas.width = view_width;
+canvas.height = view_height;
 
-var grid_width = 40;
-var grid_height = 40;
+var canvasHasBeenUpdated = true;
 
-var cell_size = 16;
-
-canvas.width = grid_width * cell_size;
-canvas.height = grid_width * cell_size;
-
-var grid = [];
+var nodes = [];
 
 gridReset();
 
@@ -84,33 +108,8 @@ gridReset();
 
 function gridReset() {
 
-	grid = [];
-
-	for (let h=0; h<grid_height; h++) {
-
-		let row = [];
-
-		for (let w=0; w<grid_width; w++) {
-
-			let cell = {
-				ID: 0,
-				parentCell: null,
-				x: w,
-				y: h,
-				h: 0,
-				g: 0,
-				f: 0,
-			}
-
-			row.push(cell);
-			
-		}
-
-		grid.push(row);
-
-	}
-
-	started = false;
+	let node = new Node( mouseX, mouseY );
+	nodes.push(node);
 
 }
 
@@ -140,12 +139,13 @@ setInterval(loop, 1000/FPS);
 
 function update() {
 
-	let skip = FRAMESKIP;
+/*	let skip = FRAMESKIP;
 
 	while (skip) {
 		updateAStar();
 		skip--;
 	}
+*/
 
 }
 
@@ -154,24 +154,29 @@ function update() {
 
 function draw(){
 
-	for (let row of grid) {
-		for (let cell of row) {
+	if ( canvasHasBeenUpdated ) {
 
-			mouseW = (mouseX/cell_size) - (mouseX/cell_size)%1
-			mouseH = (mouseY/cell_size) - (mouseY/cell_size)%1
+		drawSquare( 0, 0, canvas.width, canvas.height, COLOR_EMPTY);
 
-			drawSquare( cell.x * cell_size, cell.y * cell_size, cell_size-1, cell_size-1, ITEM_COLOR[cell.ID]);
+		for (let node of nodes) {
 
-			if ( mouseW == cell.x && mouseH == cell.y ) {
-				let rgb = (ITEM_COLOR[menu.selectedIndex]).slice(1, 7);
-				let r = parseInt(rgb.slice(0,2), 16);
-				let g = parseInt(rgb.slice(2,4), 16);
-				let b = parseInt(rgb.slice(4,6), 16);
-				drawSquare( cell.x * cell_size, cell.y * cell_size, cell_size-1, cell_size-1, "rgba("+r+","+g+","+b+", .5)");
+			drawSquare( node.x-8, node.y-8, 16, 16, "#FF0000");
+			
+			for ( let neighbour of node.getNeighbourNodes() ) {
+
+				ctx.strokeStyle="#000000";
+
+				ctx.beginPath();
+				ctx.moveTo( node.x, node.y );
+				ctx.lineTo( neighbour.x, neighbour.y );
+				ctx.stroke();
+				
 			}
 
-
 		}
+
+		canvasHasBeenUpdated = false;
+
 	}
 
 }
@@ -180,7 +185,6 @@ function draw(){
 // LOOP PRINCIPAL
 
 function loop() {
-
 
 	draw();
 
@@ -303,32 +307,6 @@ function traceback(cell) {
 }
 
 
-function updateCellOnClick( mW, mH ) {
-
-	if ( grid[mouseH][mouseW] == start )
-		start = null;
-
-	if ( grid[mouseH][mouseW] == end )
-		end = null;
-
-	grid[mouseH][mouseW].ID = menu.selectedIndex;
-
-	if (menu.selectedIndex == START) {
-
-		if (start)
-			start.ID = EMPTY;
-		start = grid[mouseH][mouseW];
-
-	} else if (menu.selectedIndex == GOAL) {
-
-		if (end)
-			end.ID = EMPTY;
-		end = grid[mouseH][mouseW];
-
-	}
-
-}
-
 //=========================================================//
 
 // FUNÇÕES DE INPUT
@@ -345,6 +323,15 @@ function handleKeyDown(e){
     if([32, 37, 38, 39, 40].indexOf(e.keyCode) > -1) {
         e.preventDefault();
     }
+
+    // shift = 16
+
+    // space = 32
+
+    // left  = 37
+    // up    = 38
+    // right = 39
+    // down  = 40 
 
 }
 
@@ -373,10 +360,13 @@ function mouseClick(event) {
 
 	mouseMove(event);
 	
-	mouseW = (mouseX/cell_size) - (mouseX/cell_size)%1
-	mouseH = (mouseY/cell_size) - (mouseY/cell_size)%1
+    console.log(mouseX, mouseY);
 
-   updateCellOnClick( mouseW, mouseH );
+    let node = new Node( mouseX, mouseY );
+
+    nodes.push(node);
+
+    canvasHasBeenUpdated = true;
 
 }
 
@@ -389,10 +379,9 @@ function touchClick(event) {
 		mouseX = touches[i].pageX;
 		mouseY = touches[i].pageY;
 
-		mouseW = (mouseX/cell_size) - (mouseX/cell_size)%1
-		mouseH = (mouseY/cell_size) - (mouseY/cell_size)%1
+		console.log(mouseX, mouseY);
 
-	    updateCellOnClick( mouseW, mouseH );
+		canvasHasBeenUpdated = true;
 
 	}
 
