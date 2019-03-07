@@ -10,6 +10,7 @@ var n_hblocks = canvas.width / blockSize;
 var n_vblocks = canvas.height / blockSize;
 
 var grassTexture = document.getElementById('textureGrass');
+
 var dirtTexture = document.getElementById('textureDirt');
 var stoneTexture = document.getElementById('textureStone');
 var woodTexture = document.getElementById('textureWood');
