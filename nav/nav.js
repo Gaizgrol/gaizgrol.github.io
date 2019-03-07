@@ -1,5 +1,3 @@
-import { vec2 } from './vec2.js';
-
 //=========================================================//
 
 const EMPTY = 0;
@@ -56,8 +54,70 @@ var mouseH = -1;
 
 //=========================================================//
 
+class vec2 {
+	
+	constructor(x, y){
 
-export class Node {
+		this.x = x;
+		this.y = y;
+
+	}
+
+	sum( otherVec ) {
+		return new vec2( otherVec.x + this.x, otherVec.y + this.y );
+	}
+
+	sub( otherVec ) {
+		return new vec2( this.x - otherVec.x, this.y - otherVec.y );
+	}
+
+	norm() {
+		let tx = this.x;
+		let ty = this.y;
+		return Math.sqrt(tx*tx + ty*ty);
+	}
+
+	sqrNorm() {
+		let tx = this.x;
+		let ty = this.y;
+		return tx*tx + ty*ty;
+	}
+
+	normalize() {
+		let n = this.norm();
+		if (n) {
+			return new vec2(this.x/n, this.y/n);
+		}else{
+			return new vec2(0, 0);
+		}
+	}
+
+	constMult( c ) {
+		return new vec2(this.x*c, this.y*c);
+	}
+
+	dot( otherVec ) {
+		let tx = this.x;
+		let ty = this.y;
+		let ox = otherVec.x;
+		let oy = otherVec.y;
+		return tx*ox + ty*oy;
+	}
+
+	project( B ) {
+		let n = B.normalize();
+		let len = this.dot( n );
+		return n.constMult(len);
+	}
+
+	gramSchmidt() {
+		return new vec2( this.y, -this.x );
+	}
+
+}
+
+
+class Node {
 
 	constructor( x, y ) {
 
@@ -65,6 +125,9 @@ export class Node {
 		this.y = y;
 
 		this.neighbours = [];
+
+		this.isSelected = false;
+		this.status = EMPTY;
 
 	}
 
@@ -99,6 +162,7 @@ canvas.height = view_height;
 var canvasHasBeenUpdated = true;
 
 var nodes = [];
+var selectedNode = null;
 
 gridReset();
 
@@ -108,8 +172,22 @@ gridReset();
 
 function gridReset() {
 
-	let node = new Node( mouseX, mouseY );
-	nodes.push(node);
+	let node0 = new Node( 111, 133 );
+	let node1 = new Node( 155, 362 );
+	let node2 = new Node( 357, 228 );
+	let node3 = new Node( 307, 124 );
+	let node4 = new Node( 489, 135 );
+
+	node0.neighbours.push( node3, node1 );
+	node1.neighbours.push( node2 );
+	node2.neighbours.push( node3 );
+	node3.neighbours.push( node4 );
+
+	nodes.push(node0);
+	nodes.push(node1);
+	nodes.push(node2);
+	nodes.push(node3);
+	nodes.push(node4);
 
 }
 
@@ -156,23 +234,20 @@ function draw(){
 
 	if ( canvasHasBeenUpdated ) {
 
-		drawSquare( 0, 0, canvas.width, canvas.height, COLOR_EMPTY);
+		drawSquare( 0, 0, canvas.width, canvas.height, "#FFFFFF");
 
 		for (let node of nodes) {
-
+			if (node.isSelected)
+				drawSquare( node.x-9, node.y-9, 18, 18, "#0000FF");
 			drawSquare( node.x-8, node.y-8, 16, 16, "#FF0000");
-			
-			for ( let neighbour of node.getNeighbourNodes() ) {
+		}
 
-				ctx.strokeStyle="#000000";
+		for (let node of nodes)
+			for ( let neighbour of node.getNeighbourNodes() )
+				drawArrow(node.x, node.y, neighbour.x, neighbour.y, "#000000");
 
-				ctx.beginPath();
-				ctx.moveTo( node.x, node.y );
-				ctx.lineTo( neighbour.x, neighbour.y );
-				ctx.stroke();
-				
-			}
-
+		if (selectedNode){
+			drawSquare( selectedNode.x-8, selectedNode.y-8, 16, 16, "#00FF00");
 		}
 
 		canvasHasBeenUpdated = false;
@@ -325,6 +400,7 @@ function handleKeyDown(e){
     }
 
     // shift = 16
+    // ctrl  = 17
 
     // space = 32
 
@@ -340,9 +416,8 @@ function handleKeyDown(e){
 
 function handleKeyUp(e){
 
-	if (key[e.keyCode]) {
+	if (key[e.keyCode])
 		key[e.keyCode] = false;
-	}
 
 }
 
@@ -359,14 +434,57 @@ function mouseMove(event) {
 function mouseClick(event) {
 
 	mouseMove(event);
-	
-    console.log(mouseX, mouseY);
 
-    let node = new Node( mouseX, mouseY );
+    if ( key[16] ) {
 
-    nodes.push(node);
+    	for ( let node of nodes )
+    		if ( mouseX >= node.x-8 && mouseX <= node.x+8 )
+    			if ( mouseY >= node.y-8 && mouseY <= node.y+8 ) {
+    				
+    				node.isSelected = true;
+    				if ( selectedNode ) {
 
-    canvasHasBeenUpdated = true;
+    					let alreadyOnArray = false;
+    					for ( let neighbour of selectedNode.neighbours ) {
+    						if ( neighbour == selectedNode ) {
+    							alreadyOnArray = true
+    							break;
+    						}
+    					}
+
+    					if (!alreadyOnArray)
+    						selectedNode.neighbours.push(node);
+
+    				}
+
+    			}
+
+    } else if ( key[17] ) {
+
+    	for ( let node of nodes )
+    		node.isSelected = false;
+
+    	let nodeOnCursor;
+
+    	for ( let node of nodes )
+    		if ( mouseX >= node.x-8 && mouseX <= node.x+8 )
+    			if ( mouseY >= node.y-8 && mouseY <= node.y+8 ) {
+    				nodeOnCursor = node;
+    			}
+
+   		selectedNode = nodeOnCursor;
+
+    } else {
+
+    	for ( let node of nodes )
+    		node.isSelected = false;
+
+	    let node = new Node( mouseX, mouseY );
+	    nodes.push(node);
+
+	}
+
+	canvasHasBeenUpdated = true;
 
 }
 
@@ -394,6 +512,23 @@ function drawSquare(x1, y1, w, h, color) {
 	ctx.rect(x1, y1, w, h);
 	ctx.fill();
 
+}
+
+function drawArrow(fromx, fromy, tox, toy, color){
+    
+    var headlen = 16;   // length of head in pixels
+    var angle = Math.atan2(toy-fromy,tox-fromx);
+
+    ctx.strokeStyle = color;
+
+    ctx.beginPath();
+    ctx.moveTo(fromx, fromy);
+    ctx.lineTo(tox, toy);
+    ctx.lineTo(tox-headlen*Math.cos(angle-Math.PI/6),toy-headlen*Math.sin(angle-Math.PI/6));
+    ctx.moveTo(tox, toy);
+    ctx.lineTo(tox-headlen*Math.cos(angle+Math.PI/6),toy-headlen*Math.sin(angle+Math.PI/6));
+
+    ctx.stroke();
 }
 
 //=========================================================//
