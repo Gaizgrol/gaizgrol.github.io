@@ -35,6 +35,8 @@ let val2 = 1 + Math.random();
 
 let treeSpacing = 3;
 
+setTimeout( () => {
+
 for (let i = 0; i < n_hblocks; i++){
 
     let baseHeight = canvas.height/2;
@@ -107,6 +109,9 @@ for (let i = 0; i < n_hblocks; i++){
     }
 
 }
+
+
+}, 1000 );
 
 
 function drawBlock(x, y, texture, index) {
