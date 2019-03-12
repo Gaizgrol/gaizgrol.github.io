@@ -11,8 +11,8 @@ var finalCtx = finalCanvas.getContext("2d");
 
 
 // Tamanho dos canvas
-var cw = 512;
-var ch = 512;
+var cw = window.innerWidth;
+var ch = window.innerHeight;
 
 var lastX, lastY;
 
@@ -30,7 +30,7 @@ ctx.rect(0, 0, cw, ch);
 ctx.fill();
 
 // Desenhamos a raspadinha por cima de tudo
-finalCtx.drawImage(canvas, 0, 0);
+finalCtx.drawImage(canvas, 0, 0, cw, ch);
 
 // Imagem que iremos desenhar
 var img = new Image();
@@ -74,7 +74,7 @@ function draw(x, y) {
 
     // Desenhamos a imagem no canvas
     finalCtx.globalCompositeOperation = "source-over";
-    finalCtx.drawImage(img, 0, 0);
+    finalCtx.drawImage(img, 0, 0, cw, ch);
 
     if (lastX && lastY) {
 
@@ -87,7 +87,7 @@ function draw(x, y) {
 
         ctx.beginPath();
         ctx.lineCap = "round";
-        ctx.lineWidth = 24;
+        ctx.lineWidth = Math.max( 8, Math.min( point_distance(x, y, lastX, lastY)/2, 42) );
         ctx.moveTo(lastX, lastY);
         ctx.lineTo(x, y);
         ctx.stroke();
@@ -109,6 +109,12 @@ function draw(x, y) {
     // Mais info aqui:
     // https://developer.mozilla.org/en-US/docs/Web/API/CanvasRenderingContext2D/globalCompositeOperation
 
+}
+
+function point_distance(sx, sy, ex, ey) {
+    let dx = sx-ex;
+    let dy = sy-ey;
+    return Math.sqrt( dx*dx + dy*dy );
 }
 
 // Colocamos o canvas final no documento
