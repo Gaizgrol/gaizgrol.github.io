@@ -1,3 +1,47 @@
+class Item {
+
+    edx = 0;
+    edy = 0;
+
+    constructor(image) {
+
+        this.sprite = image;
+        this.enchantSprite = null;
+
+        this.surface = document.createElement("canvas");
+        this.surface.width = image.width;
+        this.surface.height = image.height;
+
+        this.ctx = this.surface.getContext("2d");
+
+    }
+
+
+    draw(x,y) {
+
+        this.ctx.clearRect(0, 0, this.surface.width, this.surface.height)
+        this.ctx.globalCompositeOperation = "source-over";
+        this.ctx.drawImage(this.sprite, 0, 0);
+        this.ctx.globalCompositeOperation = "multiply";
+
+        for (let ey = -1; ey <= 1; ey++) {
+            for (let ex = -1; ex <= 1; ex++) {
+                this.ctx.drawImage(this.enchantSprite, this.edx + ex*this.enchantSprite.width, this.edy + ey*this.enchantSprite.height);
+            }    
+        }
+
+        this.ctx.globalCompositeOperation = "destination-in";
+        this.ctx.drawImage(this.sprite, 0, 0);
+
+        this.edx = ( this.edx + 0.25 ) % this.enchantSprite.width;
+        this.edy = ( this.edy - 0.25 ) % this.enchantSprite.height;
+
+        ctx.drawImage(this.surface, x, y);
+
+    }
+
+}
+
 // Canvas do jogo e do jogo escalado
 /**@type {HTMLCanvasElement}        */   var game = document.createElement("canvas");
 /**@type {HTMLCanvasElement}        */   var screen = document.getElementById("screen");
@@ -45,6 +89,7 @@ var game_images = [
     "assets/tiles/grass.png",
     // UI
     "assets/ui/slot.png",
+    "assets/ui/enchant.png",
 ];
 
 var loaded_images = 0;
@@ -70,10 +115,22 @@ for ( let i = 0; i < game_images.length; i++ ) {
 ctx.imageSmoothingEnabled = false;
 screenCtx.imageSmoothingEnabled = false;
 
+var sword = null;
+
+var hasLoaded = false;
+
 loop();
 
-
 function loop() {
+
+    if ( loaded_images == game_images.length && !hasLoaded ) {
+        
+        hasLoaded = true;
+
+        sword = new Item( game_images[0] );
+        sword.enchantSprite = game_images[3];
+
+    }
 
     if ( loaded_images == game_images.length ) {
         render();
@@ -102,10 +159,7 @@ function render() {
 
     ctx.drawImage(game_images[0], px - camx, py - camy, blockSize, blockSize);
 
-    for ( let s = 0; s < 10; s++ ) {
-        ctx.drawImage(game_images[2], 20*s, game.height - 20, 20, 20);
-        ctx.drawImage(game_images[0], 20*s + 2, game.height - 18, blockSize, blockSize);
-    }
+    sword.draw(0, game.height - 16);
 
     // Resolução grande!
     screenCtx.drawImage( game, 0, 0, screen.width, screen.height );
