@@ -1,0 +1,13 @@
+services:
+  gaizgrol-site:
+    container_name: gaizgrol-site
+    image: node:18-alpine
+    ports:
+      - "3000:5173"
+    volumes:
+      - ../app:/app
+    working_dir: /app
+    entrypoint:
+      - tail
+      - -f
+      - /dev/null
