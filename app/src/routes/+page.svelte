@@ -5,48 +5,14 @@
     import Planet from "$lib/components/svg/icons/Planet.svelte";
     import Rocket from "$lib/components/svg/icons/Rocket.svelte";
 
-    import ejcm from '$lib/assets/ejcm.png'
-    import estacio from '$lib/assets/estacio.png'
-    import legaut from '$lib/assets/legaut.png'
-    import resilia from '$lib/assets/resilia.png'
-    import ufrj from '$lib/assets/ufrj.png'
-	import Divider from "$lib/components/Divider.svelte";
-
 	import { onMount } from "svelte";
+	import { scrollSmoothlyTo } from "$lib/util/animation";
 
-    type Brand = {
-        title: string
-        logo: string
-        background: string
-    }
+    import { sineInOut } from 'svelte/easing'
 
-    const brands: Brand[] = [
-        {
-            title: 'Universidade Estácio de Sá',
-            logo: estacio,
-            background: '#144bc9'
-        },
-        {
-            title: 'Resilia',
-            logo: resilia,
-            background: '#2d2c2c'
-        },
-        {
-            title: 'LegAut',
-            logo: legaut,
-            background: 'white'
-        },
-        {
-            title: 'EJCM',
-            logo: ejcm,
-            background: '#203469'
-        },
-        {
-            title: 'UFRJ',
-            logo: ufrj,
-            background: 'white'
-        }
-    ]
+    import type { PageData } from "./$types";
+    
+    export let data: PageData;
 
     type Page = {
         title: string
@@ -77,29 +43,71 @@
     $: canGoFurther = page < contents.length-1
 
     let rocket: HTMLDivElement;
-    let journey: HTMLDivElement;
+    let earth: HTMLDivElement;
+    
+    let actualPlanet: number = -1;
+    let planets: HTMLDivElement[] = [];
+    let journey: HTMLDivElement
+
+    const pageNext = () => {
+        if (actualPlanet < 0) {
+            departure()
+        } else {
+            nextPlanet()
+        }
+    }
+
+    const departure = () => {
+        earth.style.transform = "translateY(100%)"
+        actualPlanet = planets.length
+        nextPlanet()
+    }
+
+    const nextPlanet = () => {
+        actualPlanet = actualPlanet === 0 ? 0 : actualPlanet-1
+        scrollSmoothlyTo(journey, planets[actualPlanet], 5, sineInOut)
+    }
+
+    const focusOnPlanet = () => {
+        if (actualPlanet < 0) {
+            planets.at(-1)?.scrollIntoView(false)
+        } else {
+            planets.at(actualPlanet)?.scrollIntoView(true)
+        }
+    }
 
     onMount(() => {
-        console.log({ rocket, journey })
+        focusOnPlanet()
+        window.addEventListener('resize', () => {
+            focusOnPlanet()
+        })
     })
 </script>
 
 <div class="sections">
     <Background/>
     <div bind:this={journey} class="journey">
-        {#each brands as {background, logo, title} (title)}
         <div>
-            <Divider/>
-            <Planet size="20vw" img={logo} color={background}/>
+            <div class="divider"></div>
+        </div>
+        {#each data.roles as {name, skillGroups, institution}, index}
+        <div bind:this={planets[index]}>
+            <Planet
+                img={institution.logo.image}
+                color={institution.logo.backgroundColor}
+                orbits={Object.values(skillGroups)}
+                size="20vw"
+                satteliteSize="4vw"
+            />
+            <div class="divider"></div>
         </div>
         {/each}
-        <div>
-            <Divider/>
-        </div>
-        <div bind:this={rocket}>
+        <div class="rocket" bind:this={rocket}>
             <Rocket/>
         </div>
-        <Earth size="40vw"/>
+        <div bind:this={earth} class="earth">
+            <Earth size="40vw"/>
+        </div>
     </div>
     <div class="pages">
         <div class="gradient"></div>
@@ -107,7 +115,7 @@
             <h2>{content.title}</h2>
             <p>{content.text}</p>
             {#if canGoFurther}
-                <button on:click={() => page++}>
+                <button on:click={pageNext}>
                     Próximo
                 </button>
             {:else}
@@ -117,8 +125,12 @@
             {/if}
         </div>
         <div class="checkpoints">
-            {#each brands as {background, logo, title} (title)}
-                <Planet img={logo} imgWidth="80%" color={background}/>
+            {#each data.roles as {institution}}
+                <Planet
+                    img={institution.logo.image}
+                    color={institution.logo.backgroundColor}
+                    imgWidth="80%"
+                />
             {/each}
             <Earth/>
         </div>
@@ -145,8 +157,27 @@
             flex-direction: column;
             justify-content: flex-start;
             align-items: center;
-            overflow-y: scroll;
+            overflow-y: hidden;
             width: 50%;
+
+            .divider {
+                height: 150vh;
+            }
+
+            .rocket {
+                position: absolute;
+                bottom: 64px;
+                z-index: 2;
+                transform: translateY(-100%)
+            }
+            .earth {
+                transition: transform 2s ease-in;
+
+                position: absolute;
+                bottom: 64px;
+                z-index: -11;
+                transform: translateY(70%)
+            }
         }
 
         .pages {
@@ -157,7 +188,7 @@
 
             .gradient {
                 width: 64px;
-                background: linear-gradient(90deg, rgba(4,9,15,0) 0%, rgba(4,9,15,1) 100%);
+                background: linear-gradient(90deg, rgba(4, 9, 15, 0) 0%, rgba(4,9,15,0.8) 100%);
             }
 
             .content {
